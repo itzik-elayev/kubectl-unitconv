@@ -1,6 +1,6 @@
 module github.com/itzik-elayev/kubectl-unitconv
 
-go 1.26.7
+go 1.23
 
 require (
 	github.com/spf13/cobra v1.10.2
