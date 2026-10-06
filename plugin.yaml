@@ -1,0 +1,52 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: unitconv
+spec:
+  version: v0.1.0
+  homepage: https://github.com/itzik-elayev/kubectl-unitconv
+  shortDescription: Convert Kubernetes resource.Quantity values between units
+  description: |
+    Converts Kubernetes resource.Quantity values between unit representations
+    (Ki/Mi/Gi, decimal SI, bytes, CPU millicores/nanocores) using the same
+    apimachinery parsing and arithmetic Kubernetes itself uses. Also reads
+    quantities straight off live pods, deployments, PVCs, and nodes.
+  caveats: |
+    The uri/sha256 values below are placeholders until a tagged GitHub
+    Release publishes real archives and checksums.
+  platforms:
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    uri: https://github.com/itzik-elayev/kubectl-unitconv/releases/download/v0.1.0/kubectl-unitconv_v0.1.0_darwin_amd64.tar.gz
+    sha256: "PLACEHOLDER_SHA256"
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    uri: https://github.com/itzik-elayev/kubectl-unitconv/releases/download/v0.1.0/kubectl-unitconv_v0.1.0_darwin_arm64.tar.gz
+    sha256: "PLACEHOLDER_SHA256"
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    uri: https://github.com/itzik-elayev/kubectl-unitconv/releases/download/v0.1.0/kubectl-unitconv_v0.1.0_linux_amd64.tar.gz
+    sha256: "PLACEHOLDER_SHA256"
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    uri: https://github.com/itzik-elayev/kubectl-unitconv/releases/download/v0.1.0/kubectl-unitconv_v0.1.0_linux_arm64.tar.gz
+    sha256: "PLACEHOLDER_SHA256"
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+    uri: https://github.com/itzik-elayev/kubectl-unitconv/releases/download/v0.1.0/kubectl-unitconv_v0.1.0_windows_amd64.zip
+    sha256: "PLACEHOLDER_SHA256"
+    bin: kubectl-unitconv.exe

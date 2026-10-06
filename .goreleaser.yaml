@@ -1,0 +1,33 @@
+version: 2
+
+project_name: kubectl-unitconv
+
+builds:
+  - id: kubectl-unitconv
+    binary: kubectl-unitconv
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: kubectl-unitconv
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: "checksums.txt"
+
+krews:
+  - name: unitconv
+    homepage: https://github.com/itzik-elayev/kubectl-unitconv
+    short_description: Convert Kubernetes resource.Quantity values between units
+    skip_upload: true
+
+release:
+  draft: true
