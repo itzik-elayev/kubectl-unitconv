@@ -98,3 +98,8 @@ kubectl unitconv --from pod/my-app:spec.containers[0].resources.requests.memory 
   container (default: all containers, including init containers).
 - `--requirement {requests|limits}` — with a default-path lookup, limit to
   one requirement (default: both).
+
+## Contributing
+
+Pull requests must pass CI (`lint`, `test`, `release-dry-run`) and get an
+approving review before merging into `main`.
