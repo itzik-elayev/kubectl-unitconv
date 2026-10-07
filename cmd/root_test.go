@@ -114,9 +114,11 @@ func TestRunRootShowAllDropsZeroUnits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, unwanted := range []string{"0Pi", "0E", "0Ei"} {
+	// Terabyte-and-up units all round to a value needing 3+ leading zeros
+	// for 500Mi (e.g. petabytes: 0.000524) — noise, not just literal zero.
+	for _, unwanted := range []string{"terabytes", "tebibytes", "petabytes", "pebibytes", "exabytes", "exbibytes"} {
 		if strings.Contains(out, unwanted) {
-			t.Errorf("output should drop units that round to zero, found %q in:\n%s", unwanted, out)
+			t.Errorf("output should drop units insignificant at this scale, found %q in:\n%s", unwanted, out)
 		}
 	}
 	if !strings.Contains(out, "0.488281Gi") {
@@ -133,14 +135,13 @@ func TestRunRootShowAllOrdersLargestFirst(t *testing.T) {
 	// Every label ends in "...bytes" (kilobytes, kibibytes, ...), so anchor
 	// on each one's distinguishing scale marker instead of the plain word;
 	// the standalone "bytes" row is the only one starting a line with it.
-	tebi := strings.Index(out, "(2^40)")
 	gibi := strings.Index(out, "(2^30)")
 	mebi := strings.Index(out, "(2^20)")
 	kibi := strings.Index(out, "(2^10)")
 	plainBytes := strings.Index(out, "\nbytes ")
 
-	if !(tebi < gibi && gibi < mebi && mebi < kibi && kibi < plainBytes) {
-		t.Errorf("expected largest-to-smallest order (Ti, Gi, Mi, Ki, bytes), got:\n%s", out)
+	if !(gibi < mebi && mebi < kibi && kibi < plainBytes) {
+		t.Errorf("expected largest-to-smallest order (Gi, Mi, Ki, bytes), got:\n%s", out)
 	}
 }
 

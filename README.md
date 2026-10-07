@@ -62,9 +62,6 @@ Show every sensible unit for a value (no target unit given):
 
 ```sh
 kubectl unitconv 500Mi
-petabytes (10^15)    0.000001P
-tebibytes (2^40)     0.000477Ti
-terabytes (10^12)    0.000524T
 gibibytes (2^30)     0.488281Gi
 gigabytes (10^9)     0.524288G
 mebibytes (2^20)     500Mi
@@ -130,9 +127,6 @@ kubectl unitconv 1536Mi Gi --output table
 
 kubectl unitconv 500Mi --output table
 500Mi
-├─ petabytes (10^15):   0.000001P
-├─ tebibytes (2^40):    0.000477Ti
-├─ terabytes (10^12):   0.000524T
 ├─ gibibytes (2^30):    0.488281Gi
 ├─ gigabytes (10^9):    0.524288G
 ├─ mebibytes (2^20):    500Mi
@@ -142,11 +136,15 @@ kubectl unitconv 500Mi --output table
 └─ bytes:               524288000
 ```
 
-Show-all mode (no target unit) omits units that round to zero at the chosen
-`--precision` (e.g. 500Mi shown in pebibytes or larger) — they're noise, not
-information — unless every unit would round to zero, in which case nothing
-is more relevant than anything else and all of them are shown. This applies
-to `plain` and `json` output too, not just `table`.
+Show-all mode (no target unit) omits units that are insignificant at this
+quantity's scale — a value needing 3+ leading zeros to show any digit (e.g.
+500Mi shown in terabytes: `0.000524T`) is noise, not information, even
+though it's technically nonzero. This check uses a fixed 2-decimal-place
+threshold independent of `--precision`, so raising precision won't bring
+dropped units back. The only exception: if every unit would be dropped (the
+quantity is exactly zero), all of them are shown instead, since nothing is
+more relevant than anything else. This applies to `plain` and `json` output
+too, not just `table`.
 
 ## Color
 
@@ -201,9 +199,10 @@ large quantities (e.g. byte counts near int64's range) lose precision in a
 JavaScript `number` (a float64), so exact text is used instead.
 
 A show-all conversion (no target unit given) produces one array element per
-unit in the family that doesn't round to zero (see [Output modes](#output-modes)),
-sharing every field except `targetUnit`/`converted`. A `--from` lookup
-against multiple containers/requirements produces one element per reading.
+unit in the family that isn't insignificant at that scale (see [Output
+modes](#output-modes)), sharing every field except `targetUnit`/`converted`.
+A `--from` lookup against multiple containers/requirements produces one
+element per reading.
 
 The result-building and rendering functions are internal Go packages
 (`pkg/result`, `pkg/render`), structured so a future batch/stdin mode, or a
