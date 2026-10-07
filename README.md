@@ -62,13 +62,12 @@ Show every sensible unit for a value (no target unit given):
 
 ```sh
 kubectl unitconv 500Mi
-bytes                524288000
-kilobytes (10^3)     524288k
-kibibytes (2^10)     512000Ki
-megabytes (10^6)     524.288M
-mebibytes (2^20)     500Mi
-gigabytes (10^9)     0.524288G
+petabytes (10^15)    0.000001P
+tebibytes (2^40)     0.000477Ti
+terabytes (10^12)    0.000524T
 gibibytes (2^30)     0.488281Gi
+gigabytes (10^9)     0.524288G
+mebibytes (2^20)     500Mi
 ...
 ```
 
@@ -131,19 +130,20 @@ kubectl unitconv 1536Mi Gi --output table
 
 kubectl unitconv 500Mi --output table
 500Mi
-├─ bytes:               524288000
-├─ kilobytes (10^3):    524288k
-├─ kibibytes (2^10):    512000Ki
-├─ megabytes (10^6):    524.288M
-├─ mebibytes (2^20):    500Mi
-├─ gigabytes (10^9):    0.524288G
-├─ gibibytes (2^30):    0.488281Gi
+├─ petabytes (10^15):   0.000001P
+├─ tebibytes (2^40):    0.000477Ti
 ├─ terabytes (10^12):   0.000524T
-└─ tebibytes (2^40):    0.000477Ti
+├─ gibibytes (2^30):    0.488281Gi
+├─ gigabytes (10^9):    0.524288G
+├─ mebibytes (2^20):    500Mi
+├─ megabytes (10^6):    524.288M
+├─ kibibytes (2^10):    512000Ki
+├─ kilobytes (10^3):    524288k
+└─ bytes:               524288000
 ```
 
 Show-all mode (no target unit) omits units that round to zero at the chosen
-`--precision` (e.g. 500Mi shown in petabytes or larger) — they're noise, not
+`--precision` (e.g. 500Mi shown in pebibytes or larger) — they're noise, not
 information — unless every unit would round to zero, in which case nothing
 is more relevant than anything else and all of them are shown. This applies
 to `plain` and `json` output too, not just `table`.

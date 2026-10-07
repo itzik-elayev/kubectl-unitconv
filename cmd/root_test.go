@@ -124,6 +124,26 @@ func TestRunRootShowAllDropsZeroUnits(t *testing.T) {
 	}
 }
 
+func TestRunRootShowAllOrdersLargestFirst(t *testing.T) {
+	out, err := runForTest([]string{"500Mi"}, newTestOptions())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Every label ends in "...bytes" (kilobytes, kibibytes, ...), so anchor
+	// on each one's distinguishing scale marker instead of the plain word;
+	// the standalone "bytes" row is the only one starting a line with it.
+	tebi := strings.Index(out, "(2^40)")
+	gibi := strings.Index(out, "(2^30)")
+	mebi := strings.Index(out, "(2^20)")
+	kibi := strings.Index(out, "(2^10)")
+	plainBytes := strings.Index(out, "\nbytes ")
+
+	if !(tebi < gibi && gibi < mebi && mebi < kibi && kibi < plainBytes) {
+		t.Errorf("expected largest-to-smallest order (Ti, Gi, Mi, Ki, bytes), got:\n%s", out)
+	}
+}
+
 func TestRunRootShowAllKeepsEverythingWhenInputIsZero(t *testing.T) {
 	out, err := runForTest([]string{"0"}, newTestOptions())
 	if err != nil {

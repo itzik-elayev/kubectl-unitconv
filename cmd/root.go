@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -328,9 +329,11 @@ func resolveDefaultPathFamily(targetUnit string, forced convert.Family, hasForce
 // TargetUnit/Converted for each resulting Result.
 func convertOne(base result.Result, q resource.Quantity, family convert.Family, targetUnit string, precision int) ([]result.Result, error) {
 	if targetUnit == "" {
+		// convert.ShowAll returns smallest-to-largest; print largest first,
+		// since that's the more natural reading order for a unit listing.
 		convResults := dropZeroUnlessAllZero(convert.ShowAll(q, family, precision))
 		results := make([]result.Result, 0, len(convResults))
-		for _, cr := range convResults {
+		for _, cr := range slices.Backward(convResults) {
 			r := base
 			r.TargetUnit = cr.Unit.Suffix
 			r.Converted = cr.Value
