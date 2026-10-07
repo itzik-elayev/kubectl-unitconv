@@ -35,4 +35,4 @@ krews:
     skip_upload: true
 
 release:
-  draft: true
+  draft: false
