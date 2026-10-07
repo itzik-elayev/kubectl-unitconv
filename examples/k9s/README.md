@@ -15,6 +15,11 @@ already have plugins defined, copy the two entries under `unitconv-memory`
 and `unitconv-cpu` into your existing `plugins:` map instead of overwriting
 the file.
 
+Using home-manager? Enable `programs.kubectl-unitconv` from this repo's flake
+instead — it adds these entries to `programs.k9s.plugins` for you (see the
+top-level README). `nix/k9s-plugins.nix` is the source of truth; this YAML
+mirrors it and `nix flake check` fails if they drift.
+
 ## How it works
 
 Each shortcut runs `kubectl unitconv --from pod/<selected-pod> ...` using the

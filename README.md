@@ -27,6 +27,26 @@ nix build .
 nix develop   # dev shell with go + golangci-lint
 ```
 
+#### home-manager
+
+The flake exports a home-manager module that installs the plugin and, when
+`programs.k9s` is enabled, adds the [k9s shortcuts](#k9s-integration) to
+`programs.k9s.plugins`:
+
+```nix
+{
+  inputs.kubectl-unitconv.url = "github:itzik-elayev/kubectl-unitconv";
+
+  # in your home-manager configuration:
+  imports = [ inputs.kubectl-unitconv.homeManagerModules.default ];
+  programs.kubectl-unitconv.enable = true;
+  # programs.kubectl-unitconv.k9sPlugins.enable = false;  # opt out of k9s shortcuts
+}
+```
+
+Without home-manager, `nix build .#k9s-plugins` produces the same
+`plugins.yaml` to merge by hand.
+
 Once installed on `PATH`, invoke it as `kubectl unitconv ...`.
 
 ### krew
@@ -73,9 +93,9 @@ Show every sensible unit for a value (no target unit given):
 
 ```sh
 kubectl unitconv 500Mi
-gibibytes (2^30)     0.488281Gi
-gigabytes (10^9)     0.524288G
 mebibytes (2^20)     500Mi
+megabytes (10^6)     524.288M
+kibibytes (2^10)     512000Ki
 ...
 ```
 
@@ -138,8 +158,6 @@ kubectl unitconv 1536Mi Gi --output table
 
 kubectl unitconv 500Mi --output table
 500Mi
-├─ gibibytes (2^30):    0.488281Gi
-├─ gigabytes (10^9):    0.524288G
 ├─ mebibytes (2^20):    500Mi
 ├─ megabytes (10^6):    524.288M
 ├─ kibibytes (2^10):    512000Ki
@@ -147,15 +165,12 @@ kubectl unitconv 500Mi --output table
 └─ bytes:               524288000
 ```
 
-Show-all mode (no target unit) omits units that are insignificant at this
-quantity's scale — a value needing 3+ leading zeros to show any digit (e.g.
-500Mi shown in terabytes: `0.000524T`) is noise, not information, even
-though it's technically nonzero. This check uses a fixed 2-decimal-place
-threshold independent of `--precision`, so raising precision won't bring
-dropped units back. The only exception: if every unit would be dropped (the
-quantity is exactly zero), all of them are shown instead, since nothing is
-more relevant than anything else. This applies to `plain` and `json` output
-too, not just `table`.
+Show-all mode (no target unit) omits every unit the quantity is less than
+one whole of (e.g. 500Mi in gibibytes: `0.488281Gi`) — that unit is too
+coarse to express it naturally. The check is exact, independent of
+`--precision`. If the quantity is below one of every unit (e.g. `0`), only
+the finest unit is shown. This applies to `plain` and `json` output too,
+not just `table`.
 
 ## Color
 
@@ -210,7 +225,7 @@ large quantities (e.g. byte counts near int64's range) lose precision in a
 JavaScript `number` (a float64), so exact text is used instead.
 
 A show-all conversion (no target unit given) produces one array element per
-unit in the family that isn't insignificant at that scale (see [Output
+unit in the family the quantity is at least one whole of (see [Output
 modes](#output-modes)), sharing every field except `targetUnit`/`converted`.
 A `--from` lookup against multiple containers/requirements produces one
 element per reading.
