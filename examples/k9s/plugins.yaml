@@ -1,0 +1,40 @@
+# kubectl-unitconv shortcuts for k9s. See README.md in this directory for
+# setup instructions and what these do.
+plugins:
+  unitconv-memory:
+    shortCut: Shift-M
+    description: Memory requests/limits (Gi)
+    scopes:
+      - pods
+    background: false
+    confirm: false
+    command: sh
+    args:
+      - -c
+      - |
+        out=$(kubectl unitconv --from pod/"$1" --family memory Gi --output table --color always --context "$2" ${3:+--namespace "$3"} ${4:+--kubeconfig "$4"} 2>&1)
+        printf '%s\n' "$out" | less -R
+      - _
+      - $NAME
+      - $CONTEXT
+      - $NAMESPACE
+      - $KUBECONFIG
+
+  unitconv-cpu:
+    shortCut: Shift-C
+    description: CPU requests/limits (cores)
+    scopes:
+      - pods
+    background: false
+    confirm: false
+    command: sh
+    args:
+      - -c
+      - |
+        out=$(kubectl unitconv --from pod/"$1" --family cpu cores --output table --color always --context "$2" ${3:+--namespace "$3"} ${4:+--kubeconfig "$4"} 2>&1)
+        printf '%s\n' "$out" | less -R
+      - _
+      - $NAME
+      - $CONTEXT
+      - $NAMESPACE
+      - $KUBECONFIG

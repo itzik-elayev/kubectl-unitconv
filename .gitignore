@@ -1,2 +1,4 @@
 /kubectl-unitconv
 /dist/
+/result
+/result-*

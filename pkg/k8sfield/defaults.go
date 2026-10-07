@@ -148,9 +148,15 @@ func filterByName(containers []namedContainer, name string) []namedContainer {
 	return filtered
 }
 
-// pvcStorageResolver ignores opts/family — a PVC has one sensible default
-// quantity. status.capacity.storage or other variants need an explicit path.
-func pvcStorageResolver(obj *unstructured.Unstructured, _ FromOptions, _ convert.Family) ([]Reading, error) {
+// pvcStorageResolver ignores opts — a PVC has one sensible default quantity.
+// status.capacity.storage or other variants need an explicit path. PVC
+// storage has no cpu concept, so an explicit --family cpu is rejected rather
+// than silently ignored.
+func pvcStorageResolver(obj *unstructured.Unstructured, _ FromOptions, family convert.Family) ([]Reading, error) {
+	if family == convert.FamilyCPU {
+		return nil, fmt.Errorf("%s/%s is storage, not a cpu quantity; omit --family or use --family memory", obj.GetKind(), obj.GetName())
+	}
+
 	value, found, err := unstructured.NestedString(obj.Object, "spec", "resources", "requests", "storage")
 	if err != nil {
 		return nil, fmt.Errorf("reading spec.resources.requests.storage: %w", err)
