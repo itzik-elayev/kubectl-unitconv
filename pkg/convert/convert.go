@@ -13,17 +13,13 @@ var roundingMode = inf.RoundHalfEven
 
 // Result is one unit/value pair produced by ShowAll.
 type Result struct {
-	Unit   Unit
-	Value  string
-	IsZero bool // insignificant in this unit (see relevanceScale), regardless of the requested display precision
+	Unit  Unit
+	Value string
+	// IsBelowOne: the quantity is less than one whole unit (e.g. 0.22Ti),
+	// i.e. the unit is too coarse to express it naturally. Exact, so it
+	// doesn't depend on the requested display precision.
+	IsBelowOne bool
 }
-
-// relevanceScale decides whether a unit is worth showing in ShowAll,
-// independent of the requested display --precision: a value needing 3+
-// leading zeros to show any digit (e.g. 0.000016) is noise regardless of how
-// many decimals the user asked to display, since the unit itself is simply
-// too coarse or too fine to express the quantity meaningfully.
-const relevanceScale = 2
 
 // ToUnit converts a parsed quantity to the requested target unit token
 // (a real apimachinery suffix or a friendly alias) and returns the
@@ -53,8 +49,8 @@ func ShowAll(q resource.Quantity, family Family, precision int) []Result {
 
 	for _, unit := range units {
 		value := new(inf.Dec).QuoRound(base, unit.Multiplier, inf.Scale(precision), roundingMode)
-		relevance := new(inf.Dec).QuoRound(base, unit.Multiplier, inf.Scale(relevanceScale), roundingMode)
-		results = append(results, Result{Unit: unit, Value: formatDec(value, precision) + unit.Suffix, IsZero: relevance.Sign() == 0})
+		isBelowOne := new(inf.Dec).Abs(base).Cmp(unit.Multiplier) < 0
+		results = append(results, Result{Unit: unit, Value: formatDec(value, precision) + unit.Suffix, IsBelowOne: isBelowOne})
 	}
 
 	return results
