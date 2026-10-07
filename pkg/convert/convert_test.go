@@ -153,6 +153,34 @@ func TestShowAllMemory(t *testing.T) {
 	}
 }
 
+func TestShowAllMarksZeroValues(t *testing.T) {
+	// 500Mi rounds to exactly 0 once shown in Pi/E/Ei at default precision.
+	q := resource.MustParse("500Mi")
+
+	results := ShowAll(q, FamilyMemory, 6)
+
+	wantZero := map[string]bool{
+		"": false, "Mi": false, "Gi": false,
+		"Pi": true, "E": true, "Ei": true,
+	}
+	for i, r := range results {
+		suffix := MemoryUnits[i].Suffix
+		if want, ok := wantZero[suffix]; ok && r.IsZero != want {
+			t.Errorf("suffix %q IsZero = %v, want %v", suffix, r.IsZero, want)
+		}
+	}
+}
+
+func TestShowAllZeroInputMarksEveryUnitZero(t *testing.T) {
+	q := resource.MustParse("0")
+
+	for _, r := range ShowAll(q, FamilyMemory, 6) {
+		if !r.IsZero {
+			t.Errorf("unit %q: IsZero = false, want true for a zero quantity", r.Unit.Suffix)
+		}
+	}
+}
+
 func TestShowAllCPUIncludesMicrocores(t *testing.T) {
 	q := resource.MustParse("250m")
 

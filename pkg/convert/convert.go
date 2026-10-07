@@ -13,8 +13,9 @@ var roundingMode = inf.RoundHalfEven
 
 // Result is one unit/value pair produced by ShowAll.
 type Result struct {
-	Unit  Unit
-	Value string
+	Unit   Unit
+	Value  string
+	IsZero bool // the rounded value is exactly zero, e.g. a tiny quantity shown in a far coarser unit
 }
 
 // ToUnit converts a parsed quantity to the requested target unit token
@@ -45,7 +46,7 @@ func ShowAll(q resource.Quantity, family Family, precision int) []Result {
 
 	for _, unit := range units {
 		value := new(inf.Dec).QuoRound(base, unit.Multiplier, inf.Scale(precision), roundingMode)
-		results = append(results, Result{Unit: unit, Value: formatDec(value, precision) + unit.Suffix})
+		results = append(results, Result{Unit: unit, Value: formatDec(value, precision) + unit.Suffix, IsZero: value.Sign() == 0})
 	}
 
 	return results

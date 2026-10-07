@@ -71,7 +71,7 @@ func Table(w io.Writer, results []result.Result, colorEnabled bool, width int) {
 		if i > 0 {
 			fmt.Fprintln(w)
 		}
-		renderGroup(w, styles, g, width)
+		renderGroup(w, styles, g)
 	}
 }
 
@@ -84,12 +84,12 @@ func allSingleValued(groups []group) bool {
 	return true
 }
 
-func renderGroup(w io.Writer, styles *tableStyles, g group, width int) {
+func renderGroup(w io.Writer, styles *tableStyles, g group) {
 	if len(g.values) == 1 {
 		renderCompact(w, styles, g)
 		return
 	}
-	renderShowAll(w, styles, g, width)
+	renderShowAll(w, styles, g)
 }
 
 // renderCompact prints "<original> (<converted>)", converted emphasized —
@@ -106,33 +106,31 @@ func renderCompact(w io.Writer, styles *tableStyles, g group) {
 	fmt.Fprintln(w, line)
 }
 
-func renderShowAll(w io.Writer, styles *tableStyles, g group, width int) {
-	if caption := captionFor(g.context); caption != "" {
-		fmt.Fprintln(w, styles.muted.Render(caption))
-	}
+const (
+	treeBranch = "├─ "
+	treeLast   = "└─ "
+	// labelColumnWidth aligns converted values under the longest unit label
+	// ("exbibytes (2^60):"), matching the plain renderer's column width.
+	labelColumnWidth = 21
+)
 
-	t := table.New().
-		BorderStyle(styles.border).
-		Headers("UNIT", "VALUE").
-		StyleFunc(func(row, col int) lipgloss.Style {
-			switch {
-			case row == table.HeaderRow:
-				return styles.header
-			case col == 1:
-				return styles.accentCell
-			default:
-				return styles.mutedCell
-			}
-		})
-	if width > 0 {
-		t.Width(width)
-	}
+// renderShowAll prints the original quantity as a tree root, with one
+// branch per target unit: "500Mi" -> "├─ kibibytes (2^10): 512000Ki".
+func renderShowAll(w io.Writer, styles *tableStyles, g group) {
+	fmt.Fprintln(w, styles.bold.Render(treeRoot(g.context)))
 
-	for _, v := range g.values {
-		t.Row(v.label, v.converted)
-	}
+	for i, v := range g.values {
+		connector := treeBranch
+		if i == len(g.values)-1 {
+			connector = treeLast
+		}
 
-	fmt.Fprintln(w, t.Render())
+		label := fmt.Sprintf("%-*s", labelColumnWidth, v.label+":")
+		fmt.Fprintf(w, "%s%s%s\n",
+			styles.muted.Render(connector),
+			styles.muted.Render(label),
+			styles.accent.Render(v.converted))
+	}
 }
 
 func renderFanOut(w io.Writer, styles *tableStyles, groups []group, width int) {
@@ -174,9 +172,9 @@ func renderFanOut(w io.Writer, styles *tableStyles, groups []group, width int) {
 	fmt.Fprintln(w, t.Render())
 }
 
-// captionFor summarizes a group's shared context once, so a show-all table
-// doesn't repeat it on every row.
-func captionFor(ctx result.Result) string {
+// treeRoot summarizes a group's shared context once, as the root label of
+// its unit tree, so a show-all listing doesn't repeat it on every branch.
+func treeRoot(ctx result.Result) string {
 	var parts []string
 
 	if ctx.Kind != "" && ctx.Name != "" {
@@ -191,7 +189,7 @@ func captionFor(ctx result.Result) string {
 		parts = append(parts, label)
 	}
 
-	parts = append(parts, "original "+ctx.Original)
+	parts = append(parts, ctx.Original)
 
 	return strings.Join(parts, " · ")
 }
