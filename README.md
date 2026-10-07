@@ -2,14 +2,29 @@
 
 A kubectl plugin that converts Kubernetes `resource.Quantity` values between
 unit representations — binary SI (`Ki`/`Mi`/`Gi`), decimal SI (`k`/`M`/`G`),
-plain bytes/cores, and CPU millicores/nanocores — using the same
-`k8s.io/apimachinery` parsing and arithmetic Kubernetes itself uses.
+plain bytes/cores, and CPU nanocores/microcores/millicores — using the same
+`k8s.io/apimachinery` parsing and exact decimal arithmetic Kubernetes itself
+uses (never float64, so large quantities never lose precision before the
+final, intentional rounding).
 
 ## Install
+
+### Go
 
 ```sh
 go build -o kubectl-unitconv .
 sudo mv kubectl-unitconv /usr/local/bin/
+```
+
+### Nix
+
+```sh
+nix build github.com/itzik-elayev/kubectl-unitconv
+./result/bin/kubectl-unitconv --help
+
+# or, from a checkout:
+nix build .
+nix develop   # dev shell with go + golangci-lint
 ```
 
 Once installed on `PATH`, invoke it as `kubectl unitconv ...`.
@@ -35,6 +50,14 @@ kubectl unitconv 250m cores
 # 0.25
 ```
 
+An explicit target unit can resolve an otherwise-ambiguous bare number
+without needing `--family`:
+
+```sh
+kubectl unitconv 2 m
+# 2000m   (target unit "m" is cpu-only, so family is inferred as cpu)
+```
+
 Show every sensible unit for a value (no target unit given):
 
 ```sh
@@ -53,8 +76,122 @@ gibibytes (2^30)     0.488281Gi
 
 - `--family {auto|cpu|memory}` — force which unit family to use when the
   input is ambiguous (default `auto`; a bare number like `2` defaults to
-  memory).
-- `--precision int` — decimal places in output (default `6`).
+  memory). A resource field's own name (e.g. `memory`) always takes
+  precedence over guessing from the quantity's suffix — a memory quantity
+  written as `400m` is 400 millibytes, not 400 millicores.
+- `--precision int` — decimal places in output, `0`–`18` (default `6`).
+- `--output {auto|table|plain|json}` — see [Output modes](#output-modes).
+- `--color {auto|always|never}` — see [Color](#color).
+
+`bytes`/`cores`/`millicores`/`nanocores`/`microcores` are accepted as target
+unit aliases; `bytes` and `cores` stay semantically distinct even though both
+are a family's unitless base value — a `cores` target is rejected for a
+memory quantity and vice versa, and mismatched target/family combinations
+(e.g. treating PVC storage as cpu) are rejected with an error rather than
+silently misinterpreted.
+
+### Precision and rounding
+
+Conversion always uses exact decimal arithmetic (the quantity's own `AsDec`
+representation), never a float64 intermediate — a `float64` only has
+~15–17 significant decimal digits, which silently corrupts very large or
+very precise integer quantities before they're even rounded. Only the final
+display step rounds, to `--precision` decimal digits using **round-half-to-
+even** ("banker's rounding": `0.125` → `0.12`, `0.375` → `0.38`), the same
+default IEEE 754 uses, chosen because it has no systematic upward or
+downward bias across many conversions.
+
+**A rounded display value is not guaranteed to round-trip back to the
+original quantity.** `kubectl unitconv 1Mi Gi --precision 2` prints `0Gi`;
+re-parsing `"0Gi"` does not recover `1Mi`. Use a higher `--precision`, or the
+unrounded `--output json` `converted` string at full precision, if an exact
+value matters downstream.
+
+## Output modes
+
+- `auto` (default): an attractive table when stdout is a terminal, the
+  plain-text format below when redirected (piped, or into a file).
+- `table`: always renders the table, even when redirected — useful for
+  forcing styled output through a pager (see [k9s](#k9s-integration)).
+- `plain`: the stable, uncolored text format, regardless of terminal.
+- `json`: always a valid JSON array, never ANSI codes or decorative text —
+  see [JSON output](#json-output).
+
+```sh
+kubectl unitconv --from pod/my-app Gi --output table
+╭───────────┬──────────┬─────────────┬──────────┬───────────╮
+│ CONTAINER │ RESOURCE │ REQUIREMENT │ ORIGINAL │ CONVERTED │
+├───────────┼──────────┼─────────────┼──────────┼───────────┤
+│ app       │ memory   │ requests    │ 1536Mi   │ 1.5Gi     │
+│ app       │ memory   │ limits      │ 2Gi      │ 2Gi       │
+╰───────────┴──────────┴─────────────┴──────────┴───────────╯
+
+kubectl unitconv 1536Mi Gi --output table
+1536Mi (1.5Gi)
+```
+
+## Color
+
+`--color auto` (the default) colors output only when writing to an actual
+terminal, and honors [`NO_COLOR`](https://no-color.org) (any non-empty
+value disables color) — both checked against the real output destination,
+so piping through e.g. `less -R` or redirecting to a file disables color
+automatically. `--color always`/`--color never` override detection
+unconditionally, in either direction. `--output plain` and `--output json`
+never emit color regardless of `--color`.
+
+## JSON output
+
+```sh
+kubectl unitconv --from pod/my-app Gi --output json
+```
+
+```json
+[
+  {
+    "kind": "Pod",
+    "name": "my-app",
+    "namespace": "default",
+    "container": "app",
+    "resourceType": "memory",
+    "requirement": "requests",
+    "original": "1536Mi",
+    "targetUnit": "Gi",
+    "converted": "1.5Gi"
+  }
+]
+```
+
+Fields (all stable; new fields may be added, existing ones won't change
+shape):
+
+| Field             | Type    | Notes                                                                 |
+|-------------------|---------|------------------------------------------------------------------------|
+| `kind`            | string  | Omitted for a literal conversion (no `--from`).                        |
+| `name`            | string  | Omitted for a literal conversion.                                      |
+| `namespace`       | string  | Omitted for cluster-scoped kinds (e.g. `Node`) and literal conversions.|
+| `container`       | string  | Omitted when not applicable (literal conversion, PVC, node).           |
+| `isInitContainer` | bool    | Omitted (`false`) when not applicable.                                 |
+| `resourceType`    | string  | `"cpu"`, `"memory"`, or `"storage"`.                                   |
+| `requirement`     | string  | `"requests"` or `"limits"`; omitted when not applicable.               |
+| `original`        | string  | The quantity exactly as written/fetched, e.g. `"1536Mi"`.              |
+| `targetUnit`      | string  | The resolved apimachinery suffix (e.g. `"Gi"`); empty for a family's base unit (bytes for memory/storage, cores for cpu). |
+| `converted`       | string  | The rounded value, suffixed (e.g. `"1.5Gi"`).                          |
+
+`original` and `converted` are always JSON strings, never bare numbers —
+large quantities (e.g. byte counts near int64's range) lose precision in a
+JavaScript `number` (a float64), so exact text is used instead.
+
+A show-all conversion (no target unit given) produces one array element per
+unit in the family, sharing every field except `targetUnit`/`converted`. A
+`--from` lookup against multiple containers/requirements produces one
+element per reading.
+
+The result-building and rendering functions are internal Go packages
+(`pkg/result`, `pkg/render`), structured so a future batch/stdin mode, or a
+Lens extension consuming this same JSON to render native UI components
+instead of a terminal table, can reuse them without re-deriving conversion
+context from scratch. Neither exists yet — out of scope for this iteration.
 
 ## Live cluster lookup
 
@@ -80,7 +217,7 @@ kubectl unitconv --from pod/my-app --container app --requirement limits Gi
 # force cpu family instead of memory (which "auto" defaults to)
 kubectl unitconv --from pod/my-app --family cpu
 
-# pvc and node have one obvious quantity each
+# pvc and node have one obvious quantity each; PVC storage can't be cpu
 kubectl unitconv --from pvc/data Gi
 kubectl unitconv --from node/worker-1 --family cpu
 ```
@@ -95,9 +232,19 @@ kubectl unitconv --from pod/my-app:spec.containers[0].resources.requests.memory 
 ### `--from`-specific flags
 
 - `--container string` — with a default-path lookup, limit to one named
-  container (default: all containers, including init containers).
+  container (default: all containers, including init containers). Requires
+  `--from` with no explicit `:field.path`.
 - `--requirement {requests|limits}` — with a default-path lookup, limit to
-  one requirement (default: both).
+  one requirement (default: both). Same restriction as `--container`.
+
+## k9s integration
+
+[`examples/k9s/`](examples/k9s/) adds two k9s pod-view shortcuts: memory
+requests/limits in Gi, and CPU requests/limits in cores, for the currently
+selected pod — using `--output table --color always` piped through
+`less -R` so the styling survives the pipe. See that directory's README for
+setup and exactly how it preserves k9s's resolved context/namespace/
+kubeconfig. Requires `less` in addition to `kubectl-unitconv` itself.
 
 ## Contributing
 
