@@ -154,19 +154,40 @@ func TestShowAllMemory(t *testing.T) {
 }
 
 func TestShowAllMarksZeroValues(t *testing.T) {
-	// 500Mi rounds to exactly 0 once shown in Pi/E/Ei at default precision.
+	// Relevance is checked at a fixed 2 decimal places regardless of the
+	// requested display precision (6 here): T/Ti/P/Pi/E/Ei all round to
+	// 0.00 for 500Mi (needing 3+ leading zeros to show any digit), even
+	// though some of them (e.g. petabytes: 0.000524) are technically
+	// nonzero at the display precision.
 	q := resource.MustParse("500Mi")
 
 	results := ShowAll(q, FamilyMemory, 6)
 
 	wantZero := map[string]bool{
-		"": false, "Mi": false, "Gi": false,
-		"Pi": true, "E": true, "Ei": true,
+		"": false, "k": false, "Ki": false, "M": false, "Mi": false, "G": false, "Gi": false,
+		"T": true, "Ti": true, "P": true, "Pi": true, "E": true, "Ei": true,
 	}
 	for i, r := range results {
 		suffix := MemoryUnits[i].Suffix
 		if want, ok := wantZero[suffix]; ok && r.IsZero != want {
 			t.Errorf("suffix %q IsZero = %v, want %v", suffix, r.IsZero, want)
+		}
+	}
+}
+
+func TestShowAllRelevanceIgnoresTinyNonzeroValues(t *testing.T) {
+	// A value that needs several leading zeros to show any digit is noise
+	// regardless of how much display --precision reveals it at.
+	q := resource.MustParse("18394417215832064m") // ~18.4 Ti
+
+	for _, precision := range []int{2, 6, 18} {
+		results := ShowAll(q, FamilyMemory, precision)
+		for i, r := range results {
+			suffix := MemoryUnits[i].Suffix
+			wantZero := suffix == "E" || suffix == "Ei"
+			if r.IsZero != wantZero {
+				t.Errorf("precision=%d suffix %q IsZero = %v, want %v", precision, suffix, r.IsZero, wantZero)
+			}
 		}
 	}
 }

@@ -15,8 +15,15 @@ var roundingMode = inf.RoundHalfEven
 type Result struct {
 	Unit   Unit
 	Value  string
-	IsZero bool // the rounded value is exactly zero, e.g. a tiny quantity shown in a far coarser unit
+	IsZero bool // insignificant in this unit (see relevanceScale), regardless of the requested display precision
 }
+
+// relevanceScale decides whether a unit is worth showing in ShowAll,
+// independent of the requested display --precision: a value needing 3+
+// leading zeros to show any digit (e.g. 0.000016) is noise regardless of how
+// many decimals the user asked to display, since the unit itself is simply
+// too coarse or too fine to express the quantity meaningfully.
+const relevanceScale = 2
 
 // ToUnit converts a parsed quantity to the requested target unit token
 // (a real apimachinery suffix or a friendly alias) and returns the
@@ -46,7 +53,8 @@ func ShowAll(q resource.Quantity, family Family, precision int) []Result {
 
 	for _, unit := range units {
 		value := new(inf.Dec).QuoRound(base, unit.Multiplier, inf.Scale(precision), roundingMode)
-		results = append(results, Result{Unit: unit, Value: formatDec(value, precision) + unit.Suffix, IsZero: value.Sign() == 0})
+		relevance := new(inf.Dec).QuoRound(base, unit.Multiplier, inf.Scale(relevanceScale), roundingMode)
+		results = append(results, Result{Unit: unit, Value: formatDec(value, precision) + unit.Suffix, IsZero: relevance.Sign() == 0})
 	}
 
 	return results
