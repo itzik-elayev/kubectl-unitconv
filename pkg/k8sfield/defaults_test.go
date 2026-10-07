@@ -195,6 +195,22 @@ func TestResolveDefaultPVC(t *testing.T) {
 	}
 }
 
+func TestResolveDefaultPVCRejectsCPUFamily(t *testing.T) {
+	pvc := &unstructured.Unstructured{Object: map[string]any{
+		"kind": "PersistentVolumeClaim",
+		"spec": map[string]any{
+			"resources": map[string]any{
+				"requests": map[string]any{"storage": "10Gi"},
+			},
+		},
+	}}
+
+	_, err := ResolveDefault(pvc, FromOptions{}, convert.FamilyCPU)
+	if err == nil {
+		t.Fatal("expected error treating PVC storage as a cpu quantity")
+	}
+}
+
 func TestResolveDefaultNode(t *testing.T) {
 	node := &unstructured.Unstructured{Object: map[string]any{
 		"kind": "Node",
