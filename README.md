@@ -58,6 +58,17 @@ kubectl unitconv 2 m
 # 2000m   (target unit "m" is cpu-only, so family is inferred as cpu)
 ```
 
+`m`/`u`/`n` (milli/micro/nano) suffixes are the exception: apimachinery
+allows them on *any* quantity, not just cpu, and real clusters do write
+storage values this way. So on a literal input they're only a last-resort
+guess — an explicit memory-only target unit (or `--family memory`) always
+wins instead of erroring:
+
+```sh
+kubectl unitconv 2387966302991320m Ti
+# 2.171843Ti   (not an error: "Ti" decides memory, overriding the weak "m" guess)
+```
+
 Show every sensible unit for a value (no target unit given):
 
 ```sh
