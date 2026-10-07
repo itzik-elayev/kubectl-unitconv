@@ -292,4 +292,22 @@ kubeconfig. Requires `less` in addition to `kubectl-unitconv` itself.
 ## Contributing
 
 Pull requests must pass CI (`lint`, `test`, `release-dry-run`) and get an
-approving review before merging into `main`.
+approving review before merging into `main`. PRs are squash-merged, so the
+PR title becomes the commit message — it must be a
+[Conventional Commit](https://www.conventionalcommits.org) (`fix: ...`,
+`feat: ...`, `feat!: ...`), checked by the `pr-title` workflow.
+
+## Releasing
+
+Releases are automated with
+[release-please](https://github.com/googleapis/release-please). Every merge
+to `main` updates an open "release PR" that bumps the version from the
+Conventional Commit titles since the last release (`fix` → patch, `feat` →
+minor, `!`/`BREAKING CHANGE` → major) and writes
+`CHANGELOG.md`. Merging that release PR tags the commit and runs goreleaser,
+publishing archives and checksums to the GitHub release.
+
+The release PR is opened with the workflow's own token, which GitHub doesn't
+let trigger other workflows — so CI won't run on it and an admin has to
+merge it past the required checks. It only touches the version and
+changelog.
