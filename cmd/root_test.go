@@ -109,6 +109,31 @@ func TestRunRootMissingValueWithoutFrom(t *testing.T) {
 	}
 }
 
+func TestRunRootShowAllDropsZeroUnits(t *testing.T) {
+	out, err := runForTest([]string{"500Mi"}, newTestOptions())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, unwanted := range []string{"0Pi", "0E", "0Ei"} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("output should drop units that round to zero, found %q in:\n%s", unwanted, out)
+		}
+	}
+	if !strings.Contains(out, "0.488281Gi") {
+		t.Errorf("expected non-zero gibibytes row preserved, got:\n%s", out)
+	}
+}
+
+func TestRunRootShowAllKeepsEverythingWhenInputIsZero(t *testing.T) {
+	out, err := runForTest([]string{"0"}, newTestOptions())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "0Ei") {
+		t.Errorf("a zero quantity should still show every unit (nothing is more relevant than anything else), got:\n%s", out)
+	}
+}
+
 func TestRunRootJSONOutputIsValidAndUncolored(t *testing.T) {
 	opts := newTestOptions()
 	opts.output = "json"

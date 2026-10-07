@@ -328,7 +328,7 @@ func resolveDefaultPathFamily(targetUnit string, forced convert.Family, hasForce
 // TargetUnit/Converted for each resulting Result.
 func convertOne(base result.Result, q resource.Quantity, family convert.Family, targetUnit string, precision int) ([]result.Result, error) {
 	if targetUnit == "" {
-		convResults := convert.ShowAll(q, family, precision)
+		convResults := dropZeroUnlessAllZero(convert.ShowAll(q, family, precision))
 		results := make([]result.Result, 0, len(convResults))
 		for _, cr := range convResults {
 			r := base
@@ -351,4 +351,21 @@ func convertOne(base result.Result, q resource.Quantity, family convert.Family, 
 	base.TargetUnit = unit.Suffix
 	base.Converted = converted
 	return []result.Result{base}, nil
+}
+
+// dropZeroUnlessAllZero removes show-all units that round to zero (e.g. a
+// small quantity shown in Exa), which just add noise — unless every unit
+// would round to zero, in which case there's nothing more relevant to keep
+// and showing them all is more informative than showing nothing.
+func dropZeroUnlessAllZero(results []convert.Result) []convert.Result {
+	nonZero := make([]convert.Result, 0, len(results))
+	for _, r := range results {
+		if !r.IsZero {
+			nonZero = append(nonZero, r)
+		}
+	}
+	if len(nonZero) == 0 {
+		return results
+	}
+	return nonZero
 }

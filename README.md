@@ -128,7 +128,25 @@ kubectl unitconv --from pod/my-app Gi --output table
 
 kubectl unitconv 1536Mi Gi --output table
 1536Mi (1.5Gi)
+
+kubectl unitconv 500Mi --output table
+500Mi
+├─ bytes:               524288000
+├─ kilobytes (10^3):    524288k
+├─ kibibytes (2^10):    512000Ki
+├─ megabytes (10^6):    524.288M
+├─ mebibytes (2^20):    500Mi
+├─ gigabytes (10^9):    0.524288G
+├─ gibibytes (2^30):    0.488281Gi
+├─ terabytes (10^12):   0.000524T
+└─ tebibytes (2^40):    0.000477Ti
 ```
+
+Show-all mode (no target unit) omits units that round to zero at the chosen
+`--precision` (e.g. 500Mi shown in petabytes or larger) — they're noise, not
+information — unless every unit would round to zero, in which case nothing
+is more relevant than anything else and all of them are shown. This applies
+to `plain` and `json` output too, not just `table`.
 
 ## Color
 
@@ -183,9 +201,9 @@ large quantities (e.g. byte counts near int64's range) lose precision in a
 JavaScript `number` (a float64), so exact text is used instead.
 
 A show-all conversion (no target unit given) produces one array element per
-unit in the family, sharing every field except `targetUnit`/`converted`. A
-`--from` lookup against multiple containers/requirements produces one
-element per reading.
+unit in the family that doesn't round to zero (see [Output modes](#output-modes)),
+sharing every field except `targetUnit`/`converted`. A `--from` lookup
+against multiple containers/requirements produces one element per reading.
 
 The result-building and rendering functions are internal Go packages
 (`pkg/result`, `pkg/render`), structured so a future batch/stdin mode, or a
