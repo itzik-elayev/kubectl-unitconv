@@ -132,20 +132,19 @@ func TestRunRootMissingValueWithoutFrom(t *testing.T) {
 	}
 }
 
-func TestRunRootShowAllDropsZeroUnits(t *testing.T) {
+func TestRunRootShowAllDropsUnitsBelowOne(t *testing.T) {
 	out, err := runForTest([]string{"500Mi"}, newTestOptions())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// Terabyte-and-up units all round to a value needing 3+ leading zeros
-	// for 500Mi (e.g. petabytes: 0.000524) — noise, not just literal zero.
-	for _, unwanted := range []string{"terabytes", "tebibytes", "petabytes", "pebibytes", "exabytes", "exbibytes"} {
+	// 500Mi is under one whole unit from gigabytes upward (0.488281Gi).
+	for _, unwanted := range []string{"gibibytes", "gigabytes", "terabytes", "tebibytes", "petabytes", "pebibytes", "exabytes", "exbibytes"} {
 		if strings.Contains(out, unwanted) {
-			t.Errorf("output should drop units insignificant at this scale, found %q in:\n%s", unwanted, out)
+			t.Errorf("output should drop units the quantity is below one of, found %q in:\n%s", unwanted, out)
 		}
 	}
-	if !strings.Contains(out, "0.488281Gi") {
-		t.Errorf("expected non-zero gibibytes row preserved, got:\n%s", out)
+	if !strings.Contains(out, "500Mi") || !strings.Contains(out, "524.288M") {
+		t.Errorf("expected mebibytes/megabytes rows preserved, got:\n%s", out)
 	}
 }
 
@@ -158,23 +157,23 @@ func TestRunRootShowAllOrdersLargestFirst(t *testing.T) {
 	// Every label ends in "...bytes" (kilobytes, kibibytes, ...), so anchor
 	// on each one's distinguishing scale marker instead of the plain word;
 	// the standalone "bytes" row is the only one starting a line with it.
-	gibi := strings.Index(out, "(2^30)")
 	mebi := strings.Index(out, "(2^20)")
 	kibi := strings.Index(out, "(2^10)")
 	plainBytes := strings.Index(out, "\nbytes ")
 
-	if !(gibi < mebi && mebi < kibi && kibi < plainBytes) {
-		t.Errorf("expected largest-to-smallest order (Gi, Mi, Ki, bytes), got:\n%s", out)
+	if mebi < 0 || !(mebi < kibi && kibi < plainBytes) {
+		t.Errorf("expected largest-to-smallest order (Mi, Ki, bytes), got:\n%s", out)
 	}
 }
 
-func TestRunRootShowAllKeepsEverythingWhenInputIsZero(t *testing.T) {
+func TestRunRootShowAllZeroInputKeepsOnlyFinestUnit(t *testing.T) {
 	out, err := runForTest([]string{"0"}, newTestOptions())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out, "0Ei") {
-		t.Errorf("a zero quantity should still show every unit (nothing is more relevant than anything else), got:\n%s", out)
+	want := "0\n"
+	if out != want {
+		t.Errorf("a zero quantity should show just its finest unit, got %q, want %q", out, want)
 	}
 }
 

@@ -331,7 +331,7 @@ func convertOne(base result.Result, q resource.Quantity, family convert.Family, 
 	if targetUnit == "" {
 		// convert.ShowAll returns smallest-to-largest; print largest first,
 		// since that's the more natural reading order for a unit listing.
-		convResults := dropZeroUnlessAllZero(convert.ShowAll(q, family, precision))
+		convResults := dropUnitsBelowOne(convert.ShowAll(q, family, precision))
 		results := make([]result.Result, 0, len(convResults))
 		for _, cr := range slices.Backward(convResults) {
 			r := base
@@ -356,19 +356,19 @@ func convertOne(base result.Result, q resource.Quantity, family convert.Family, 
 	return []result.Result{base}, nil
 }
 
-// dropZeroUnlessAllZero removes show-all units that round to zero (e.g. a
-// small quantity shown in Exa), which just add noise — unless every unit
-// would round to zero, in which case there's nothing more relevant to keep
-// and showing them all is more informative than showing nothing.
-func dropZeroUnlessAllZero(results []convert.Result) []convert.Result {
-	nonZero := make([]convert.Result, 0, len(results))
+// dropUnitsBelowOne removes show-all units where the quantity is less than
+// one whole unit (e.g. 0.22Ti) — the unit is too coarse to be useful. If
+// every unit is below one (a zero or sub-base-unit quantity), the finest
+// unit alone is kept so there's always an answer. results must be ascending.
+func dropUnitsBelowOne(results []convert.Result) []convert.Result {
+	kept := make([]convert.Result, 0, len(results))
 	for _, r := range results {
-		if !r.IsZero {
-			nonZero = append(nonZero, r)
+		if !r.IsBelowOne {
+			kept = append(kept, r)
 		}
 	}
-	if len(nonZero) == 0 {
-		return results
+	if len(kept) == 0 && len(results) > 0 {
+		return results[:1]
 	}
-	return nonZero
+	return kept
 }

@@ -153,51 +153,55 @@ func TestShowAllMemory(t *testing.T) {
 	}
 }
 
-func TestShowAllMarksZeroValues(t *testing.T) {
-	// Relevance is checked at a fixed 2 decimal places regardless of the
-	// requested display precision (6 here): T/Ti/P/Pi/E/Ei all round to
-	// 0.00 for 500Mi (needing 3+ leading zeros to show any digit), even
-	// though some of them (e.g. petabytes: 0.000524) are technically
-	// nonzero at the display precision.
+func TestShowAllMarksUnitsBelowOne(t *testing.T) {
+	// 500Mi is under one whole unit from Gi upward (0.488281Gi), and at least
+	// one whole unit from G downward (0.524288G is also below one).
 	q := resource.MustParse("500Mi")
 
 	results := ShowAll(q, FamilyMemory, 6)
 
-	wantZero := map[string]bool{
-		"": false, "k": false, "Ki": false, "M": false, "Mi": false, "G": false, "Gi": false,
-		"T": true, "Ti": true, "P": true, "Pi": true, "E": true, "Ei": true,
+	wantBelowOne := map[string]bool{
+		"": false, "k": false, "Ki": false, "M": false, "Mi": false,
+		"G": true, "Gi": true, "T": true, "Ti": true, "P": true, "Pi": true, "E": true, "Ei": true,
 	}
 	for i, r := range results {
 		suffix := MemoryUnits[i].Suffix
-		if want, ok := wantZero[suffix]; ok && r.IsZero != want {
-			t.Errorf("suffix %q IsZero = %v, want %v", suffix, r.IsZero, want)
+		if r.IsBelowOne != wantBelowOne[suffix] {
+			t.Errorf("suffix %q IsBelowOne = %v, want %v", suffix, r.IsBelowOne, wantBelowOne[suffix])
 		}
 	}
 }
 
-func TestShowAllRelevanceIgnoresTinyNonzeroValues(t *testing.T) {
-	// A value that needs several leading zeros to show any digit is noise
-	// regardless of how much display --precision reveals it at.
-	q := resource.MustParse("18394417215832064m") // ~18.4 Ti
+func TestShowAllBelowOneIsIndependentOfPrecision(t *testing.T) {
+	q := resource.MustParse("248188432430") // ~0.23Ti, ~231Gi
 
-	for _, precision := range []int{2, 6, 18} {
-		results := ShowAll(q, FamilyMemory, precision)
-		for i, r := range results {
+	for _, precision := range []int{0, 6, 18} {
+		for i, r := range ShowAll(q, FamilyMemory, precision) {
 			suffix := MemoryUnits[i].Suffix
-			wantZero := suffix == "E" || suffix == "Ei"
-			if r.IsZero != wantZero {
-				t.Errorf("precision=%d suffix %q IsZero = %v, want %v", precision, suffix, r.IsZero, wantZero)
+			wantBelowOne := suffix == "T" || suffix == "Ti" || suffix == "P" || suffix == "Pi" || suffix == "E" || suffix == "Ei"
+			if r.IsBelowOne != wantBelowOne {
+				t.Errorf("precision=%d suffix %q IsBelowOne = %v, want %v", precision, suffix, r.IsBelowOne, wantBelowOne)
 			}
 		}
 	}
 }
 
-func TestShowAllZeroInputMarksEveryUnitZero(t *testing.T) {
+func TestShowAllExactlyOneUnitIsNotBelowOne(t *testing.T) {
+	q := resource.MustParse("1Gi")
+
+	for i, r := range ShowAll(q, FamilyMemory, 6) {
+		if MemoryUnits[i].Suffix == "Gi" && r.IsBelowOne {
+			t.Error("exactly 1Gi must not count as below one gibibyte")
+		}
+	}
+}
+
+func TestShowAllZeroInputIsBelowOneEverywhere(t *testing.T) {
 	q := resource.MustParse("0")
 
 	for _, r := range ShowAll(q, FamilyMemory, 6) {
-		if !r.IsZero {
-			t.Errorf("unit %q: IsZero = false, want true for a zero quantity", r.Unit.Suffix)
+		if !r.IsBelowOne {
+			t.Errorf("unit %q: IsBelowOne = false, want true for a zero quantity", r.Unit.Suffix)
 		}
 	}
 }
