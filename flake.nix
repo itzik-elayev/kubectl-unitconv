@@ -18,7 +18,7 @@
         {
           packages.default = pkgs.buildGoModule {
             pname = "kubectl-unitconv";
-            version = "0.1.0"; # x-release-please-version
+            version = "1.0.0"; # x-release-please-version
 
             src = ./.;
 
