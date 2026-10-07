@@ -168,3 +168,30 @@ func familyFromToken(token string) (Family, bool) {
 	}
 	return 0, false
 }
+
+// weakCPUSuffixes are scale suffixes conventionally used for cpu quantities
+// but not exclusive to them: apimachinery allows milli/micro/nano scale on
+// any quantity, and real clusters do write memory/storage values this way
+// (e.g. "14186514537870950m"). Guessing cpu from one of these on a literal
+// input is only a last-resort fallback (see weakFamilyFromSuffix) — unlike
+// a real memory-only suffix (Ki/Mi/.../E), it must never override or
+// conflict with a stronger signal such as an explicit target unit.
+var weakCPUSuffixes = map[string]bool{"n": true, "u": true, "m": true}
+
+// strongFamilyFromSuffix reports the family a raw quantity suffix reliably
+// implies, excluding the weak milli/micro/nano suffixes.
+func strongFamilyFromSuffix(suffix string) (Family, bool) {
+	if weakCPUSuffixes[suffix] {
+		return 0, false
+	}
+	return familyFromToken(suffix)
+}
+
+// weakFamilyFromSuffix reports the family a weak (milli/micro/nano) suffix
+// conventionally suggests, for use only once nothing stronger has decided.
+func weakFamilyFromSuffix(suffix string) (Family, bool) {
+	if weakCPUSuffixes[suffix] {
+		return FamilyCPU, true
+	}
+	return 0, false
+}

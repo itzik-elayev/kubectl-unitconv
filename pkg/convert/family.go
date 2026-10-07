@@ -91,11 +91,15 @@ func (d *determination) apply(family Family, source string) error {
 // present: a resource field's own name is authoritative over guessing from
 // the quantity's suffix, since a milli-scale suffix like "400m" is valid on
 // a memory quantity too, not just cpu. With no field context (literal CLI
-// input), the quantity's own suffix and the requested target unit are used
-// instead; an explicit target (e.g. "2" converted to "m") can disambiguate
-// an otherwise-ambiguous bare number. A bare number with no other signal
-// defaults to memory. Conflicting signals are reported as errors rather
-// than silently resolved.
+// input), a *reliable* suffix (Ki/Mi/.../E) or the requested target unit
+// decide it instead; an explicit target (e.g. "2" converted to "m") can
+// disambiguate an otherwise-ambiguous bare number. A milli/micro/nano
+// suffix is not reliable enough to conflict with any of those — it's only
+// consulted as a last resort, when nothing else decided anything, so a real
+// memory/storage quantity merely written in milli-scale (as some clusters
+// do) still converts correctly when an explicit target unit is given. A
+// bare number with no signal at all defaults to memory. Every other
+// conflicting signal is reported as an error rather than silently resolved.
 func ResolveFamily(rawInput, fieldHint, targetUnit string, forced Family, hasForced bool) (Family, error) {
 	var d determination
 
@@ -109,7 +113,7 @@ func ResolveFamily(rawInput, fieldHint, targetUnit string, forced Family, hasFor
 		if err := d.apply(hintFamily, "resource field"); err != nil {
 			return 0, err
 		}
-	} else if suffixFamily, ok := familyFromToken(rawSuffix(rawInput)); ok {
+	} else if suffixFamily, ok := strongFamilyFromSuffix(rawSuffix(rawInput)); ok {
 		if err := d.apply(suffixFamily, fmt.Sprintf("quantity suffix %q", rawSuffix(rawInput))); err != nil {
 			return 0, err
 		}
@@ -124,6 +128,9 @@ func ResolveFamily(rawInput, fieldHint, targetUnit string, forced Family, hasFor
 	}
 
 	if !d.set {
+		if weakFamily, ok := weakFamilyFromSuffix(rawSuffix(rawInput)); ok {
+			return weakFamily, nil
+		}
 		return FamilyMemory, nil // documented ambiguous default
 	}
 	return d.family, nil

@@ -39,6 +39,29 @@ func TestRunRootLiteralShowAllPreservesOriginal(t *testing.T) {
 	}
 }
 
+func TestRunRootMilliScaleStorageValueConvertsAsMemory(t *testing.T) {
+	// A real PVC storage value from a live cluster, written in milli-scale —
+	// apimachinery allows this on any quantity, not just cpu. The explicit
+	// memory-only target unit must decide family, not the "m" suffix.
+	out, err := runForTest([]string{"2387966302991320m", "Ti"}, newTestOptions())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "2.171843Ti\n" {
+		t.Errorf("got %q, want %q", out, "2.171843Ti\n")
+	}
+
+	opts := newTestOptions()
+	opts.family = "memory"
+	out, err = runForTest([]string{"2387966302991320m", "Ti"}, opts)
+	if err != nil {
+		t.Fatalf("unexpected error with --family memory: %v", err)
+	}
+	if out != "2.171843Ti\n" {
+		t.Errorf("got %q, want %q", out, "2.171843Ti\n")
+	}
+}
+
 func TestRunRootInvalidFamily(t *testing.T) {
 	opts := newTestOptions()
 	opts.family = "bogus"

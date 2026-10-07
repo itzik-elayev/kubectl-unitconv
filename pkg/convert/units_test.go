@@ -127,6 +127,27 @@ func TestResolveFamily(t *testing.T) {
 		{name: "ambiguous bare number with no signal defaults memory", rawInput: "2", want: FamilyMemory},
 		{name: "unambiguous suffix conflicts with target", rawInput: "500Mi", targetUnit: "cores", wantErr: true},
 		{name: "forced conflicts with field hint", rawInput: "2", fieldHint: "cpu", forced: FamilyMemory, hasForced: true, wantErr: true},
+		{
+			name:       "weak milli suffix on literal input yields to an explicit memory target",
+			rawInput:   "2387966302991320m", // a real PVC storage value from a live cluster, milli-scale
+			targetUnit: "Ti",
+			want:       FamilyMemory,
+		},
+		{
+			name:       "weak milli suffix yields to --family memory too",
+			rawInput:   "2387966302991320m",
+			targetUnit: "Ti",
+			forced:     FamilyMemory,
+			hasForced:  true,
+			want:       FamilyMemory,
+		},
+		{
+			name:      "forced memory overrides a weak suffix guess with no target",
+			rawInput:  "400m",
+			forced:    FamilyMemory,
+			hasForced: true,
+			want:      FamilyMemory,
+		},
 	}
 
 	for _, c := range cases {
