@@ -1,0 +1,54 @@
+# krew-index manifest template, rendered by krew-release-bot on each
+# release (see .github/workflows/release.yaml); not a valid manifest as-is.
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: unitconv
+spec:
+  version: {{ .TagName }}
+  homepage: https://github.com/itzik-elayev/kubectl-unitconv
+  shortDescription: Convert resource quantities between units
+  description: |
+    Converts Kubernetes resource quantities (CPU, memory, storage) between
+    units: binary (Ki/Mi/Gi) and decimal (k/M/G) SI, bytes, cores,
+    millicores and nanocores, using the same exact decimal arithmetic
+    Kubernetes itself uses. Convert a literal value, list it in every
+    sensible unit, or read quantities straight off live pods, workloads,
+    PVCs and nodes, with table, plain or JSON output.
+  platforms:
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    {{addURIAndSha "https://github.com/itzik-elayev/kubectl-unitconv/releases/download/{{ .TagName }}/kubectl-unitconv_{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    {{addURIAndSha "https://github.com/itzik-elayev/kubectl-unitconv/releases/download/{{ .TagName }}/kubectl-unitconv_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    {{addURIAndSha "https://github.com/itzik-elayev/kubectl-unitconv/releases/download/{{ .TagName }}/kubectl-unitconv_{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    {{addURIAndSha "https://github.com/itzik-elayev/kubectl-unitconv/releases/download/{{ .TagName }}/kubectl-unitconv_{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
+    bin: kubectl-unitconv
+  - selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+    {{addURIAndSha "https://github.com/itzik-elayev/kubectl-unitconv/releases/download/{{ .TagName }}/kubectl-unitconv_{{ .TagName }}_windows_amd64.zip" .TagName }}
+    bin: kubectl-unitconv.exe
+  - selector:
+      matchLabels:
+        os: windows
+        arch: arm64
+    {{addURIAndSha "https://github.com/itzik-elayev/kubectl-unitconv/releases/download/{{ .TagName }}/kubectl-unitconv_{{ .TagName }}_windows_arm64.zip" .TagName }}
+    bin: kubectl-unitconv.exe

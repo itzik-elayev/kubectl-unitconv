@@ -43,3 +43,11 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Opens a version-bump PR against krew-index from .krew.yaml. The bot
+      # only updates plugins already in the index, so it stays off until the
+      # initial submission is accepted (repo variable KREW_INDEX_PUBLISHED).
+      - if: vars.KREW_INDEX_PUBLISHED == 'true'
+        uses: rajatjindal/krew-release-bot@c970b8a8f6dbc2f2285a26e3ae160903b87002c3 # v0.0.51
+        with:
+          krew_plugin_release_tag: ${{ inputs.tag || github.ref_name }}

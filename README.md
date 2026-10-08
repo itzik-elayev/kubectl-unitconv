@@ -51,12 +51,16 @@ Once installed on `PATH`, invoke it as `kubectl unitconv ...`.
 
 ### krew
 
-Once a tagged release publishes real binaries (`plugin.yaml` currently has
-placeholder `uri`/`sha256` values):
+Once accepted into [krew-index](https://github.com/kubernetes-sigs/krew-index):
 
 ```sh
-kubectl krew install --manifest=plugin.yaml
+kubectl krew install unitconv
 ```
+
+`.krew.yaml` is the manifest template (krew-release-bot format). After
+the plugin is in krew-index, set the repo variable
+`KREW_INDEX_PUBLISHED=true` and each release opens the version-bump PR
+against krew-index automatically.
 
 ## Usage
 
