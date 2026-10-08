@@ -23,16 +23,5 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-krews:
-  - name: unitconv
-    homepage: https://github.com/itzik-elayev/kubectl-unitconv
-    short_description: Convert Kubernetes resource.Quantity values between units
-    description: |
-      Converts Kubernetes resource.Quantity values between unit representations
-      (Ki/Mi/Gi, decimal SI, bytes, CPU millicores/nanocores) using the same
-      apimachinery parsing and arithmetic Kubernetes itself uses. Also reads
-      quantities straight off live pods, deployments, PVCs, and nodes.
-    skip_upload: true
-
 release:
   draft: false
